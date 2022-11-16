@@ -1,4 +1,8 @@
 from tkinter import Tk, Label, Button, Entry, Checkbutton, ttk, StringVar, IntVar
+#TODO
+# change geometry when summary gets big
+# merge changes
+# clean code
 
 class ClimbingGUI:
     def __init__(self, master):
@@ -6,23 +10,63 @@ class ClimbingGUI:
         master.title("Climbing grade tracker")
         master.geometry("400x300")
 
+        # creating tabs
         self.tabParent = ttk.Notebook(master)
-        self.tabInput = ttk.Frame(self.tabParent)
-        self.tabOutput = ttk.Frame(self.tabParent)
+        self.tabParent.bind('<<NotebookTabChanged>>', self.checkIndexOfTab)
+        self.tabInput = ttk.Frame(self.tabParent, width=400)
+        self.tabOutput = ttk.Frame(self.tabParent, width=400)
 
         self.tabParent.add(self.tabInput, text="Input")
         self.tabParent.add(self.tabOutput, text="Summary")
 
         self.tabParent.grid(row=0, column=0)
 
-        self.labelPrompt = Label(self.master, text="What did you climb today?")
+        # creating input layout
+        self.labelPrompt = Label(self.tabInput, text="What did you climb today?")
         self.labelPrompt.grid(row=0, column=0)
 
         for i in range(3, 10):
-            self.gradeButton = Button(master, text=f"Grade {i}", command= lambda i=i: self.createGradeButtons(i))
+            self.gradeButton = Button(self.tabInput, text=f"Grade {i}", command= lambda i=i: self.createGradeButtons(i))
             self.gradeButton.grid(row=i-2, column=0, sticky="w", pady=5)
 
-        self.gradeButtonsFrame = ttk.Frame(master)
+        self.gradeButtonsFrame = ttk.Frame(self.tabInput)
+
+
+    def checkIndexOfTab(self, *args):
+        index = self.tabParent.index(self.tabParent.select())
+        if index == 1:
+            self.addLabelsforRoutesClimbed()
+
+    def addLabelsforRoutesClimbed(self):
+        for widget in self.tabOutput.winfo_children():
+            widget.destroy()
+
+
+        file = open("climbingGrades.txt", "r")
+        file = open("climbingGrades.txt", "r")
+        lines = file.readlines()
+
+        routeDict = {}
+        if len(lines) != 0:
+            for line in lines:
+                splitLine = line.split()
+                key = splitLine[0]
+                value = splitLine[1]
+
+                routeDict[key] = int(value)
+
+        self.gradeLabelHeader = Label(self.tabOutput, text="Grade")
+        self.gradeLabelHeader.grid(row=0, column=0)
+
+        self.numberOfGradesHeader = Label(self.tabOutput, text="Number")
+        self.numberOfGradesHeader.grid(row=0, column=1)
+
+        for index, grade in enumerate(sorted(routeDict)):
+            self.gradeLabel = Label(self.tabOutput, text=f"{grade}")
+            self.gradeLabel.grid(row=index+1, column=0, sticky="w")
+
+            self.numberOfGradesLabel = Label(self.tabOutput, text=f"{routeDict[grade]}")
+            self.numberOfGradesLabel.grid(row=index+1, column=1, sticky="w")
 
     def createGradeButtons(self, grade):
         for widget in self.gradeButtonsFrame.winfo_children():
@@ -60,7 +104,7 @@ class ClimbingGUI:
             self.varGradeList.append(varGrade)
             self.varGradeNumberList.append(varGradeNumber)
 
-        self.commitButton = Button(self.gradeButtonsFrame, text="Commit", command=self.commitChanges)
+        self.commitButton = Button(self.gradeButtonsFrame, text="Register", command=self.commitChanges)
         self.commitButton.grid(column=1)
 
 
@@ -84,6 +128,9 @@ class ClimbingGUI:
                 else:
                     routeDict[self.varGradeList[i].get()] += int(self.varGradeNumberList[i].get())
 
+                self.varGradeList[i].set("0")
+                self.varGradeNumberList[i].set(0)
+
         file.close()
 
         file = open("climbingGrades.txt", "w")
@@ -91,6 +138,7 @@ class ClimbingGUI:
             file.writelines(f"{key} {routeDict[key]}\n")
 
         file.close()
+
 
 
 
