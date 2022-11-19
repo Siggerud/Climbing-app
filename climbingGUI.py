@@ -234,21 +234,23 @@ class ClimbingGUI:
     # registers any changes fron input tab to the txt file
     def commitChanges(self):
 
+        routeDict = self.routeDict.copy()
+
         for i in range(len(self.varGradeList)):
             if self.varGradeList[i].get() != "0":
                 try:
                     if self.varGradeList[i].get() not in self.routeDict:
-                        self.routeDict[self.varGradeList[i].get()] = self.varGradeNumberList[i].get()
+                        routeDict[self.varGradeList[i].get()] = self.varGradeNumberList[i].get()
                     else:
-                        self.routeDict[self.varGradeList[i].get()] += int(self.varGradeNumberList[i].get())
+                        routeDict[self.varGradeList[i].get()] += int(self.varGradeNumberList[i].get())
                 except TclError:
                     messagebox.showwarning(message="Enter a number. No changes registered")
                     self.resetGradeAndNumberVariables()
                     return
-
+        self.showRegisteredChangesToUser()
+        self.routeDict = routeDict
         self.changeTxtFile()
         self.routeDict = self.getRouteDict()
-        self.showRegisteredChangesToUser()
         self.resetGradeAndNumberVariables()
 
 
@@ -268,16 +270,16 @@ class ClimbingGUI:
                 number = self.varGradeNumberList[i].get()
                 if self.varGradeList[i].get() not in self.routeDict:
                     textToShow += f"You climbed your first grade {grade}!\n"
-                textToShow += f"You've now climbed grade {grade} {number} time(s).\n"
+
+                textToShow += f"Registered {number} climb(s) of grade {grade}.\n"
 
         messagebox.showinfo(message=textToShow)
 
-def main():
-    root = Tk()
-    climbGUI = ClimbingGUI(root)
-    root.mainloop()
 
-main()
+root = Tk()
+climbGUI = ClimbingGUI(root)
+root.mainloop()
+
 
 
 
