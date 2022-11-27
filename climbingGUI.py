@@ -3,21 +3,27 @@
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
+from datetime import datetime
+
+# TODO: teste
+# legge til kommentarer
+
 
 class ClimbingGUI:
     def __init__(self, master):
         self.routeDict = self.getRouteDict()
         self.gradeDict = self.getGradeDict()
+        self.dates = self.getDateChanges()
 
         self. master = master
         master.title("Climbing grade tracker")
-        master.geometry("400x360")
+        master.geometry("400x400")
 
         # creating tabs
         self.tabParent = ttk.Notebook(master)
         self.tabParent.bind('<<NotebookTabChanged>>', self.checkIndexOfTab)
-        self.tabInput = ttk.Frame(self.tabParent, width=400, height=360)
-        self.tabOutput = ttk.Frame(self.tabParent, width=400, height=360)
+        self.tabInput = ttk.Frame(self.tabParent, width=400, height=400)
+        self.tabOutput = ttk.Frame(self.tabParent, width=400, height=400)
 
         self.tabParent.add(self.tabInput, text="Input")
         self.tabParent.add(self.tabOutput, text="Summary")
@@ -67,6 +73,23 @@ class ClimbingGUI:
 
         return routeDict
 
+    # retrieves when you last made a change
+    def getDateChanges(self):
+        datesFile = open("dates.txt", "r")
+        lines = datesFile.readlines()
+
+        dates = {}
+        if len(lines) > 0:
+            for line in lines:
+                splitLine = line.split()
+                key = " ".join(splitLine[:2])
+                value = " ".join(splitLine[2:])
+                dates[key] = value
+
+        datesFile.close()
+
+        return dates
+
 
     # changes the txt file that keeps track of grades and numbers
     def changeTxtFile(self):
@@ -89,27 +112,30 @@ class ClimbingGUI:
         for widget in self.tabOutput.winfo_children(): # destroy previous labels
             widget.destroy()
 
+        self.summaryExplanation = Label(self.tabOutput, text="A summary of every climb registered.")
+        self.summaryExplanation.grid(row=0, column=0, columnspan=5)
+
         self.gradeLabelHeader = Label(self.tabOutput, text="Grade")
-        self.gradeLabelHeader.grid(row=0, column=0)
+        self.gradeLabelHeader.grid(row=1, column=0, sticky="w")
 
         self.numberOfGradesHeader = Label(self.tabOutput, text="Number")
-        self.numberOfGradesHeader.grid(row=0, column=1)
+        self.numberOfGradesHeader.grid(row=1, column=1, sticky="w")
 
         if len(self.routeDict) > 13:
             self.gradeLabelHeader2 = Label(self.tabOutput, text="Grade")
-            self.gradeLabelHeader2.grid(row=0, column=2)
+            self.gradeLabelHeader2.grid(row=1, column=2, sticky="w")
 
             self.numberOfGradesHeader2 = Label(self.tabOutput, text="Number")
-            self.numberOfGradesHeader2.grid(row=0, column=3)
+            self.numberOfGradesHeader2.grid(row=1, column=3, sticky="w")
 
         columnGradeValue = 0
         columnNumberOfGradesValue = 1
-        rowTracker = 1
+        rowTracker = 2
         for index, grade in enumerate(sorted(self.routeDict)):
-            if index > 13:
+            if index > 12:
                 columnGradeValue = 2
                 columnNumberOfGradesValue = 3
-                rowTracker = -13
+                rowTracker = -11
 
 
             self.gradeLabel = Label(self.tabOutput, text=f"{grade}")
@@ -118,13 +144,20 @@ class ClimbingGUI:
             self.numberOfGradesLabel = Label(self.tabOutput, text=f"{self.routeDict[grade]}")
             self.numberOfGradesLabel.grid(row=index+rowTracker, column=columnNumberOfGradesValue, sticky="w")
 
-        if len(self.routeDict) < 13: # make second pair of columns if there are too many grades to fit in first pair
+        if len(self.routeDict) < 14: # make second pair of columns if there are too many grades to fit in first pair
             col = 3
         else:
             col = 5
 
         editSummaryButton = Button(self.tabOutput, text="Edit summary", bg="orange", command=self.addEditPopup)
         editSummaryButton.grid(row=14, column=col)
+
+        count = 0
+        for key in self.dates:
+            if self.dates[key] != "0":
+                self.dateLabel = Label(self.tabOutput, text=f"{key} registered {self.dates[key]}")
+                self.dateLabel.grid(row=15+count, columnspan=5, sticky="w")
+                count += 1
 
 
     # popup menu for changing number of times a route has been climbed
@@ -180,10 +213,9 @@ class ClimbingGUI:
             messagebox.showwarning(message="Enter a number. No changes registered.")
             return
 
+        self.registerDateChanges("Last edit")
         self.showSummaryChangesToUser(gradeToBeChanged, newNumber)
-
         self.routeDict[gradeToBeChanged] = newNumber
-
         self.changeTxtFile()
         self.routeDict = self.getRouteDict()
         self.addLabelsforRoutesClimbed()
@@ -191,7 +223,11 @@ class ClimbingGUI:
 
     # show the changes that have been made in a messagebox
     def showSummaryChangesToUser(self, grade, newNumber):
-        oldNumber = self.routeDict[grade]
+        try:
+            oldNumber = self.routeDict[grade]
+        except KeyError:
+            oldNumber = 0
+
         if oldNumber != newNumber:
             message = f"Number of times you've climbed\ngrade {grade} changed from {oldNumber} to {newNumber}."
         else:
@@ -247,11 +283,32 @@ class ClimbingGUI:
                     messagebox.showwarning(message="Enter a number. No changes registered")
                     self.resetGradeAndNumberVariables()
                     return
+
+        self.registerDateChanges("Last commit")
         self.showRegisteredChangesToUser()
         self.routeDict = routeDict
         self.changeTxtFile()
         self.routeDict = self.getRouteDict()
         self.resetGradeAndNumberVariables()
+
+
+    # register time of date change
+    def registerDateChanges(self, key):
+        now = datetime.now()
+        dateText = now.strftime("%d:%m%Y %H:%M:%S")
+        self.dates[key] = dateText
+        self.editDateTxt()
+
+
+    # edits file holding date changes
+    def editDateTxt(self):
+        dateFile = open("dates.txt", "w")
+
+        for key in self.dates:
+            dateFile.write(f"{key} {self.dates[key]}\n")
+
+        dateFile.close()
+
 
 
     # resets the grade and number variables
@@ -263,17 +320,35 @@ class ClimbingGUI:
 
     # shows the registered changes from input menu in a message box
     def showRegisteredChangesToUser(self):
-        textToShow = ""
+        self.registeredChangesPopup = Toplevel(self.tabInput)
+        self.registeredChangesPopup.title("Change summary")
+
+        count = 0
         for i in range(len(self.varGradeList)):
+            textToShow = ""
             if self.varGradeList[i].get() != "0":
                 grade = self.varGradeList[i].get()
                 number = self.varGradeNumberList[i].get()
                 if self.varGradeList[i].get() not in self.routeDict:
                     textToShow += f"You climbed your first grade {grade}!\n"
-
                 textToShow += f"Registered {number} climb(s) of grade {grade}.\n"
 
-        messagebox.showinfo(message=textToShow)
+                infoLabel = Label(self.registeredChangesPopup, text=textToShow)
+                infoLabel.grid(column=0, columnspan=3, sticky="w")
+                count += 1
+
+        width = 50 + count*50
+        self.registeredChangesPopup.geometry(f"300x{width}")
+
+        goToSummaryButton = Button(self.registeredChangesPopup, text="Go to Summary", command=self.goToSummary, bg="cyan")
+        goToSummaryButton.grid(column=1)
+
+
+    # navigates to summary tab
+    def goToSummary(self):
+        self.tabParent.select(self.tabOutput)
+        self.registeredChangesPopup.destroy()
+
 
 
 root = Tk()
